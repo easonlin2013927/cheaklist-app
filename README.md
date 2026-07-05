@@ -2,7 +2,7 @@
 
 一個簡潔美觀的清單管理工具，基於 React + Vite 打造。支援增減項目、編輯、完成標記、進度條，以及匯出為 TXT / Markdown 格式。
 
-[![Live Demo](https://img.shields.io/badge/%F0%9F%9A%80%E7%94%9F%E5%91%BD%E9%A9%83%E7%89%88-brightgreen)](https://checklist-app.easonlin2013927.workers.dev/)
+[![點我觀看](https://img.shields.io/badge/%F0%9F%9A%80%E7%94%9F%E5%91%BD%E9%A9%83%E7%89%88-brightgreen)](https://checklist-app.easonlin2013927.workers.dev/)
 
 ![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
 ![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)

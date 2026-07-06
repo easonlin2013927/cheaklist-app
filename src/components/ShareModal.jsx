@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useChecklist } from '../utils/context'
 import { encodeShareData, getShareUrl } from '../utils/share'
-import { generateQRMatrix, qrToSVGPaths } from '../utils/qr'
+import { generateQRMatrix, qrToSVG } from '../utils/qr'
 import { exportItems } from '../utils/export'
 
 export default function ShareModal() {
@@ -14,13 +14,18 @@ export default function ShareModal() {
 
   useEffect(() => {
     if (!state.showShare) return
-    const data = encodeShareData(state.categories)
-    if (data) {
-      const url = getShareUrl(data)
-      setShareUrl(url)
-      const matrix = generateQRMatrix(url)
-      const { svg } = qrToSVGPaths(matrix, 4, 2)
-      setQrSvg(svg)
+    try {
+      const data = encodeShareData(state.categories)
+      if (data) {
+        const url = getShareUrl(data)
+        setShareUrl(url)
+        const qr = generateQRMatrix(url)
+        const { svg } = qrToSVG(qr, 4, 2)
+        setQrSvg(svg)
+      }
+    } catch (err) {
+      console.error('QR generation failed:', err)
+      setShareUrl('編碼失敗，請重試')
     }
   }, [state.showShare, state.categories])
 
@@ -55,7 +60,10 @@ export default function ShareModal() {
         {/* QR Code */}
         {qrSvg && (
           <div className="qr-code-container">
-            <div className="qr-code-svg" dangerouslySetInnerHTML={{ __html: qrSvg }} />
+            <div
+              className="qr-code-svg"
+              dangerouslySetInnerHTML={{ __html: qrSvg }}
+            />
             <p className="qr-code-label">掃描 QR Code 查看清單</p>
           </div>
         )}

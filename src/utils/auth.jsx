@@ -16,8 +16,12 @@ export function AuthProvider({ children }) {
     const token = localStorage.getItem('checklist-token')
     if (token) {
       setUserId(localStorage.getItem('checklist-userId'))
+      // Auth restored from localStorage — signal that verification is done
+      window.dispatchEvent(new CustomEvent('auth-verified'))
+    } else {
+      // No token — login is required
+      window.dispatchEvent(new CustomEvent('auth-required'))
     }
-    // No token = show login immediately
   }, [])
 
   const login = useCallback(async (email, password) => {
@@ -28,6 +32,7 @@ export function AuthProvider({ children }) {
       localStorage.setItem('checklist-token', res.token)
       localStorage.setItem('checklist-userId', res.userId)
       setUserId(res.userId)
+      window.dispatchEvent(new CustomEvent('auth-verified'))
       return { success: true }
     } catch (err) {
       setError(err.message)
@@ -45,6 +50,7 @@ export function AuthProvider({ children }) {
       localStorage.setItem('checklist-token', res.token)
       localStorage.setItem('checklist-userId', res.userId)
       setUserId(res.userId)
+      window.dispatchEvent(new CustomEvent('auth-verified'))
       return { success: true }
     } catch (err) {
       setError(err.message)
@@ -57,6 +63,7 @@ export function AuthProvider({ children }) {
   const logout = useCallback(() => {
     api.logout()
     setUserId(null)
+    window.dispatchEvent(new CustomEvent('auth-required'))
   }, [])
 
   return (

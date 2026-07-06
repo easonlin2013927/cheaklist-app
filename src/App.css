@@ -776,6 +776,25 @@
   cursor: pointer;
 }
 
+.modal-export-btn {
+  width: 100%;
+  padding: 12px;
+  font-size: 15px;
+  font-family: var(--font);
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--transition);
+  margin-bottom: 16px;
+}
+
+.modal-export-btn:hover {
+  background: var(--accent-hover);
+}
+
 .modal-actions {
   display: flex;
   gap: 10px;

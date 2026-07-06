@@ -2,7 +2,6 @@ import { useEffect, useRef } from 'react'
 import './App.css'
 import { useChecklist } from './utils/context'
 import { checkForSharedData } from './utils/share'
-import { exportItems } from './utils/export'
 import CategoryTabs from './components/CategoryTabs'
 import SearchBar from './components/SearchBar'
 import ThemeToggle from './components/ThemeToggle'
@@ -139,71 +138,9 @@ function AppContent() {
         </>
       )}
 
-      {/* Export Modal */}
-      {state.showExport && (
-        <div className="modal-overlay" onClick={() => dispatch({ type: 'TOGGLE_EXPORT' })}>
-          <div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
-            <h2 className="modal-title">匯出清單</h2>
-
-            <fieldset className="modal-fieldset">
-              <legend>檔案格式</legend>
-              <div className="modal-options">
-                {[
-                  { value: 'txt', label: '.txt 純文字' },
-                  { value: 'md', label: '.md Markdown' },
-                ].map((opt) => (
-                  <label key={opt.value} className="modal-radio">
-                    <input
-                      type="radio"
-                      name="export-format"
-                      value={opt.value}
-                      checked={state.selectedExportFormat === opt.value}
-                      onChange={() => dispatch({ type: 'SET_EXPORT_FORMAT', payload: opt.value })}
-                    />
-                    <span>{opt.label}</span>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-
-            <label className="modal-checkbox">
-              <input
-                type="checkbox"
-                checked={state.includeDone}
-                onChange={(e) => dispatch({ type: 'SET_INCLUDE_DONE', payload: e.target.checked })}
-              />
-              <span>包含已完成項目</span>
-            </label>
-
-            <div className="modal-actions">
-              <button className="modal-btn modal-btn-cancel" onClick={() => dispatch({ type: 'TOGGLE_EXPORT' })}>
-                取消
-              </button>
-              <button
-                className="modal-btn modal-btn-confirm"
-                onClick={() => {
-                  exportItems(state.categories, state.selectedExportFormat, state.includeDone)
-                  dispatch({ type: 'TOGGLE_EXPORT' })
-                }}
-              >
-                匯出
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       <footer className="footer">
         <div className="footer-actions">
-          <button onClick={() => dispatch({ type: 'TOGGLE_EXPORT' })} className="export-btn" aria-label="匯出清單">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="7 10 12 15 17 10" />
-              <line x1="12" y1="15" x2="12" y2="3" />
-            </svg>
-            匯出
-          </button>
-          <button onClick={() => dispatch({ type: 'TOGGLE_SHARE' })} className="export-btn" aria-label="分享清單">
+          <button onClick={() => dispatch({ type: 'TOGGLE_SHARE' })} className="export-btn" aria-label="分享與匯出">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
               <circle cx="18" cy="5" r="3" />
               <circle cx="6" cy="12" r="3" />
@@ -211,7 +148,7 @@ function AppContent() {
               <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
               <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
             </svg>
-            分享
+            分享與匯出
           </button>
           {done > 0 && (
             <button

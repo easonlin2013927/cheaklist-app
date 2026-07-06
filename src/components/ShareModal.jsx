@@ -13,10 +13,12 @@ export default function ShareModal() {
     if (!state.showShare) return
     const data = encodeShareData(state.categories)
     if (data) {
-      setShareUrl(getShareUrl(data))
-      // Generate QR code
-      const matrix = generateQRMatrix(getShareUrl(data))
+      const url = getShareUrl(data)
+      setShareUrl(url)
+      // Generate QR code with inline fill color for reliability
+      const matrix = generateQRMatrix(url)
       const { svg } = qrToSVGPaths(matrix, 4, 2)
+      // Replace CSS variable with a solid color that matches theme
       setQrSvg(svg)
     }
   }, [state.showShare, state.categories])
@@ -43,12 +45,15 @@ export default function ShareModal() {
   return (
     <div className="modal-overlay" onClick={() => dispatch({ type: 'TOGGLE_SHARE' })}>
       <div className="modal-dialog share-dialog" onClick={(e) => e.stopPropagation()}>
-        <h2 className="modal-title">🔗 分享清單</h2>
+        <h2 className="modal-title">分享清單</h2>
 
         {/* QR Code */}
         {qrSvg && (
           <div className="qr-code-container">
-            <div className="qr-code-svg" dangerouslySetInnerHTML={{ __html: qrSvg }} />
+            <div
+              className="qr-code-svg"
+              dangerouslySetInnerHTML={{ __html: qrSvg }}
+            />
             <p className="qr-code-label">掃描 QR Code 查看清單</p>
           </div>
         )}

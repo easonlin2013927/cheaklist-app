@@ -10,9 +10,10 @@ const PRIORITY_COLORS = {
 }
 
 export default function ListItem({ item, categoryId }) {
-  const { state, dispatch } = useChecklist()
+  const { dispatch } = useChecklist()
   const [editingId, setEditingId] = useState(null)
   const [editText, setEditText] = useState('')
+  const [editPriority, setEditPriority] = useState('medium')
   const editRef = useRef(null)
 
   useEffect(() => {
@@ -30,12 +31,14 @@ export default function ListItem({ item, categoryId }) {
   const startEdit = () => {
     setEditingId(item.id)
     setEditText(item.text)
+    setEditPriority(item.priority)
   }
 
   const saveEdit = () => {
     const text = editText.trim()
     if (text) {
       dispatch({ type: 'EDIT_ITEM', payload: { categoryId, itemId: item.id, text } })
+      dispatch({ type: 'UPDATE_PRIORITY', payload: { categoryId, itemId: item.id, priority: editPriority } })
     }
     setEditingId(null)
     setEditText('')
@@ -50,7 +53,7 @@ export default function ListItem({ item, categoryId }) {
   if (editingId === item.id) {
     return (
       <div className={`list-item${item.done ? ' done' : ''}`}>
-        <div className="list-item-content">
+        <div className="list-item-edit">
           <input
             ref={editRef}
             type="text"
@@ -59,11 +62,22 @@ export default function ListItem({ item, categoryId }) {
             onBlur={saveEdit}
             onKeyDown={(e) => {
               if (e.key === 'Enter') saveEdit()
-              if (e.key === 'Escape') { setEditingId(null); setEditText('') }
+              if (e.key === 'Escape') { setEditingId(null); setEditText(''); setEditPriority('medium') }
             }}
             className="edit-input"
             aria-label="編輯項目"
           />
+          <select
+            value={editPriority}
+            onChange={(e) => setEditPriority(e.target.value)}
+            className="edit-priority-select"
+            aria-label="編輯優先級"
+            onBlur={saveEdit}
+          >
+            <option value="low">低</option>
+            <option value="medium">中</option>
+            <option value="high">高</option>
+          </select>
         </div>
       </div>
     )

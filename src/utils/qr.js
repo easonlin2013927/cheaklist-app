@@ -435,7 +435,7 @@ export function qrToSVGPaths(matrix, cellSize = 4, quietZone = 2) {
       if (matrix[r][c]) {
         const x = (c + quietZone) * cellSize
         const y = (r + quietZone) * cellSize
-        paths.push(`M${x},${y}h${cellSize}v${cellSize}h-${cellSize}z`)
+        paths.push(`<rect x="${x}" y="${y}" width="${cellSize}" height="${cellSize}" fill="#1d1d1f" rx="0.5"/>`)
       }
     }
   }

@@ -3,12 +3,12 @@ import { jwt, sign, verify } from 'hono/jwt'
 
 const app = new Hono()
 
-const JWT_SECRET = Deno.env.get('JWT_SECRET') || 'checklist-app-dev-secret-change-in-production'
+const getJwtSecret = () => globalThis.env?.JWT_SECRET || 'checklist-app-dev-secret-change-in-production'
 const HASH_ROUNDS = 10
 
 // ── Helpers ───────────────────────────────────────────────────
 
-async function hashPassword(password: string): Promise<string> {
+async function hashPassword(password) {
   const encoder = new TextEncoder()
   const salt = crypto.randomUUID()
   const derivedKey = await crypto.subtle.importKey(
@@ -22,13 +22,13 @@ async function hashPassword(password: string): Promise<string> {
   return `${salt}:${hash}`
 }
 
-async function verifyPassword(password: string, stored: string): Promise<boolean> {
+async function verifyPassword(password, stored) {
   const [salt, _] = stored.split(':')
   const hash = await hashPasswordWithSalt(password, salt)
   return hash === stored
 }
 
-async function hashPasswordWithSalt(password: string, salt: string): Promise<string> {
+async function hashPasswordWithSalt(password, salt) {
   const encoder = new TextEncoder()
   const derivedKey = await crypto.subtle.importKey(
     'raw', encoder.encode(password), 'PBKDF2', false, ['deriveBits']
@@ -40,17 +40,17 @@ async function hashPasswordWithSalt(password: string, salt: string): Promise<str
   return `:${btoa(String.fromCharCode(...new Uint8Array(key)))}`
 }
 
-function generateToken(userId: string): Promise<string> {
-  return sign({ sub: userId, iat: Date.now() }, JWT_SECRET, 'HS256')
+function generateToken(userId) {
+  return sign({ sub: userId, iat: Date.now() }, getJwtSecret(), 'HS256')
 }
 
-function authenticate(c: any): Promise<{ userId: string } | null> {
+function authenticate(c) {
   try {
     const authHeader = c.req.header('Authorization')
     if (!authHeader?.startsWith('Bearer ')) return Promise.resolve(null)
     const token = authHeader.slice(7)
-    const payload = verify(token, JWT_SECRET)
-    return Promise.resolve(payload as { sub: string })
+    const payload = verify(token, getJwtSecret())
+    return Promise.resolve({ sub: payload.sub })
   } catch {
     return Promise.resolve(null)
   }

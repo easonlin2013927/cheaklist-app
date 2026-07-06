@@ -250,8 +250,17 @@ export function ChecklistProvider({ children }) {
         const data = await api.getData()
         dispatch({ type: 'HYDRATE', payload: data })
       } catch {
-        // Use defaults
-        dispatch({ type: 'HYDRATE', payload: DEFAULT_DATA })
+        // API failed — try localStorage fallback
+        try {
+          const saved = localStorage.getItem('checklist-data')
+          if (saved) {
+            dispatch({ type: 'HYDRATE', payload: JSON.parse(saved) })
+          } else {
+            dispatch({ type: 'HYDRATE', payload: DEFAULT_DATA })
+          }
+        } catch {
+          dispatch({ type: 'HYDRATE', payload: DEFAULT_DATA })
+        }
       }
     }
     load()
@@ -260,7 +269,18 @@ export function ChecklistProvider({ children }) {
   // Persist to cloud on change
   useEffect(() => {
     if (state.categories.length === 0) return
-    debouncedSync(state, api.saveData)
+    debouncedSync(state, async (s) => {
+      try {
+        await api.saveData(s)
+      } catch {
+        // API failed — save to localStorage as fallback
+        localStorage.setItem('checklist-data', JSON.stringify({
+          categories: s.categories,
+          activeCategoryId: s.activeCategoryId,
+          themePreference: s.themePreference
+        }))
+      }
+    })
   }, [state.categories, state.activeCategoryId, state.themePreference])
 
   const activeCategory = state.categories.find(c => c.id === state.activeCategoryId) || state.categories[0]

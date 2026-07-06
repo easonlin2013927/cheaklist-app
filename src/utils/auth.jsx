@@ -4,7 +4,6 @@
 
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { api } from './api'
-import { ChecklistProvider as ChecklistCtx, useChecklist } from './context'
 
 const AuthContext = createContext(null)
 
@@ -17,10 +16,8 @@ export function AuthProvider({ children }) {
     const token = localStorage.getItem('checklist-token')
     if (token) {
       setUserId(localStorage.getItem('checklist-userId'))
-    } else {
-      window.addEventListener('auth-required', () => setUserId(null))
     }
-    return () => window.removeEventListener('auth-required', () => setUserId(null))
+    // No token = show login immediately
   }, [])
 
   const login = useCallback(async (email, password) => {

@@ -892,6 +892,34 @@
   background: var(--success);
 }
 
+/* ===== QR Code ===== */
+.qr-code-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding: 20px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+}
+
+.qr-code-svg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.qr-code-svg path {
+  fill: var(--text-primary);
+}
+
+.qr-code-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
 /* ===== Stats Modal ===== */
 .stats-dialog {
   max-width: 480px;

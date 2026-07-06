@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useChecklist } from '../utils/context'
 import { encodeShareData, getShareUrl } from '../utils/share'
+import { generateQRMatrix, qrToSVGPaths } from '../utils/qr'
 
 export default function ShareModal() {
   const { state, dispatch } = useChecklist()
   const [shareUrl, setShareUrl] = useState('')
+  const [qrSvg, setQrSvg] = useState('')
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
@@ -12,6 +14,10 @@ export default function ShareModal() {
     const data = encodeShareData(state.categories)
     if (data) {
       setShareUrl(getShareUrl(data))
+      // Generate QR code
+      const matrix = generateQRMatrix(getShareUrl(data))
+      const { svg } = qrToSVGPaths(matrix, 4, 2)
+      setQrSvg(svg)
     }
   }, [state.showShare, state.categories])
 
@@ -23,7 +29,6 @@ export default function ShareModal() {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {
-      // Fallback
       const textarea = document.createElement('textarea')
       textarea.value = shareUrl
       document.body.appendChild(textarea)
@@ -39,6 +44,15 @@ export default function ShareModal() {
     <div className="modal-overlay" onClick={() => dispatch({ type: 'TOGGLE_SHARE' })}>
       <div className="modal-dialog share-dialog" onClick={(e) => e.stopPropagation()}>
         <h2 className="modal-title">🔗 分享清單</h2>
+
+        {/* QR Code */}
+        {qrSvg && (
+          <div className="qr-code-container">
+            <div className="qr-code-svg" dangerouslySetInnerHTML={{ __html: qrSvg }} />
+            <p className="qr-code-label">掃描 QR Code 查看清單</p>
+          </div>
+        )}
+
         <p className="share-desc">複製以下連結，分享給其他人查看這份清單：</p>
 
         <div className="share-url-row">
@@ -60,7 +74,7 @@ export default function ShareModal() {
 
         <div className="modal-actions">
           <button
-            className="modal-btn modal-btn-cancel"
+            className="modal-btn modal-btn-confirm"
             onClick={() => dispatch({ type: 'TOGGLE_SHARE' })}
           >
             關閉

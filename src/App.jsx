@@ -1,6 +1,7 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import './App.css'
-import { useChecklist } from './utils/context'
+import { AuthProvider, useAuth } from './utils/auth'
+import { ChecklistProvider, useChecklist } from './utils/context'
 import { checkForSharedData } from './utils/share'
 import CategoryTabs from './components/CategoryTabs'
 import SearchBar from './components/SearchBar'
@@ -10,19 +11,62 @@ import ListItem from './components/ListItem'
 import CategoryModal from './components/CategoryModal'
 import StatsModal from './components/StatsModal'
 import ShareModal from './components/ShareModal'
+import LoginPage from './components/LoginPage'
 
 function App() {
   return (
-    <div className="app">
-      <div className="app-inner">
-        <AppContent />
+    <AuthProvider>
+      <AppShell />
+    </AuthProvider>
+  )
+}
+
+function AppShell() {
+  const { isAuthenticated, loading } = useAuth()
+  const [appReady, setAppReady] = useState(false)
+
+  // Listen for auth events
+  useEffect(() => {
+    const onVerified = () => setAppReady(true)
+    const onRequired = () => setAppReady(false)
+    window.addEventListener('auth-verified', onVerified)
+    window.addEventListener('auth-required', onRequired)
+    return () => {
+      window.removeEventListener('auth-verified', onVerified)
+      window.removeEventListener('auth-required', onRequired)
+    }
+  }, [])
+
+  // If auth verified or no auth needed, show app
+  if (loading || !appReady) {
+    return (
+      <div className="auth-page">
+        <div className="auth-card">
+          <div className="auth-spinner" />
+          <p className="auth-subtitle">載入中...</p>
+        </div>
       </div>
-    </div>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return <LoginPage />
+  }
+
+  return (
+    <ChecklistProvider>
+      <div className="app">
+        <div className="app-inner">
+          <AppContent />
+        </div>
+      </div>
+    </ChecklistProvider>
   )
 }
 
 function AppContent() {
   const { state, dispatch, activeCategory, getFilteredItems } = useChecklist()
+  const { logout } = useAuth()
   const hasImported = useRef(false)
 
   // Check for shared data on mount
@@ -138,6 +182,11 @@ function AppContent() {
         </>
       )}
 
+      {/* Share/Export Modal */}
+      {state.showShare && (
+        <ShareModal />
+      )}
+
       <footer className="footer">
         <div className="footer-actions">
           <button onClick={() => dispatch({ type: 'TOGGLE_SHARE' })} className="export-btn" aria-label="分享與匯出">
@@ -158,13 +207,15 @@ function AppContent() {
               清除已完成（{done}）
             </button>
           )}
+          <button onClick={logout} className="logout-btn" aria-label="登出">
+            登出
+          </button>
         </div>
       </footer>
 
       {/* Modals */}
       <CategoryModal />
       <StatsModal />
-      <ShareModal />
     </>
   )
 }

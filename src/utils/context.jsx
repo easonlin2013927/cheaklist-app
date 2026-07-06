@@ -1,11 +1,17 @@
 /**
- * Checklist context and reducer for managing categories, items, and UI state.
+ * Checklist context and reducer with cloud sync support.
  */
 
 import { createContext, useContext, useReducer, useEffect, useCallback } from 'react'
-import { loadCategories, saveCategories, saveTheme } from '../utils/storage'
+import { api } from './api'
 
 const ChecklistContext = createContext(null)
+
+const DEFAULT_DATA = {
+  categories: [{ id: 1, title: '皜', items: [] }],
+  activeCategoryId: 1,
+  themePreference: 'system'
+}
 
 const initialState = {
   categories: [],
@@ -20,12 +26,22 @@ const initialState = {
   editingCategory: null,
   selectedExportFormat: 'txt',
   includeDone: false,
-  importedData: null
+  importedData: null,
+  syncing: false,
+  syncError: null
 }
 
 function checklistReducer(state, action) {
   switch (action.type) {
-    // ── Hydration ───────────────────────────────────────────────
+    case 'SYNC_START':
+      return { ...state, syncing: true, syncError: null }
+
+    case 'SYNC_END':
+      return { ...state, syncing: false }
+
+    case 'SYNC_ERROR':
+      return { ...state, syncing: false, syncError: action.payload }
+
     case 'HYDRATE':
       return {
         ...state,
@@ -34,7 +50,6 @@ function checklistReducer(state, action) {
         themePreference: action.payload.themePreference ?? state.themePreference
       }
 
-    // ── Categories ──────────────────────────────────────────────
     case 'ADD_CATEGORY': {
       const newCat = { id: Date.now(), title: action.payload || '新清單', items: [] }
       return {
@@ -48,7 +63,7 @@ function checklistReducer(state, action) {
       const cats = state.categories.filter(c => c.id !== action.payload)
       return {
         ...state,
-        categories: cats.length > 0 ? cats : [{ id: Date.now(), title: '清單', items: [] }],
+        categories: cats.length > 0 ? cats : [{ id: Date.now(), title: '皜', items: [] }],
         activeCategoryId: state.activeCategoryId === action.payload
           ? (cats[0]?.id ?? cats[cats.length - 1]?.id)
           : state.activeCategoryId
@@ -67,7 +82,6 @@ function checklistReducer(state, action) {
     case 'SET_ACTIVE_CATEGORY':
       return { ...state, activeCategoryId: action.payload }
 
-    // ── Items ───────────────────────────────────────────────────
     case 'ADD_ITEM': {
       const { categoryId, text, priority } = action.payload
       return {
@@ -164,12 +178,9 @@ function checklistReducer(state, action) {
       }
     }
 
-    // ── Theme ───────────────────────────────────────────────────
     case 'SET_THEME':
-      saveTheme(action.payload)
       return { ...state, themePreference: action.payload }
 
-    // ── Search ──────────────────────────────────────────────────
     case 'SET_SEARCH_QUERY':
       return { ...state, searchQuery: action.payload }
 
@@ -179,7 +190,6 @@ function checklistReducer(state, action) {
     case 'CLEAR_SEARCH':
       return { ...state, searchQuery: '', showSearch: false }
 
-    // ── Modals ──────────────────────────────────────────────────
     case 'TOGGLE_EXPORT':
       return { ...state, showExport: !state.showExport }
 
@@ -202,7 +212,6 @@ function checklistReducer(state, action) {
     case 'SET_INCLUDE_DONE':
       return { ...state, includeDone: action.payload }
 
-    // ── Import from share ───────────────────────────────────────
     case 'IMPORT_DATA':
       return {
         ...state,
@@ -210,7 +219,6 @@ function checklistReducer(state, action) {
         showShare: true
       }
 
-    // ── Reset import ────────────────────────────────────────────
     case 'RESET_IMPORT':
       return { ...state, importedData: null }
 
@@ -219,29 +227,44 @@ function checklistReducer(state, action) {
   }
 }
 
+let syncTimer = null
+
+function debouncedSync(state, saveFn) {
+  if (syncTimer) clearTimeout(syncTimer)
+  syncTimer = setTimeout(async () => {
+    try {
+      await saveFn(state)
+    } catch {
+      // Sync errors handled by UI
+    }
+  }, 1000)
+}
+
 export function ChecklistProvider({ children }) {
   const [state, dispatch] = useReducer(checklistReducer, initialState)
 
-  // Hydrate from localStorage on mount
+  // Hydrate from cloud on mount
   useEffect(() => {
-    const data = loadCategories()
-    dispatch({ type: 'HYDRATE', payload: data })
+    const load = async () => {
+      try {
+        const data = await api.getData()
+        dispatch({ type: 'HYDRATE', payload: data })
+      } catch {
+        // Use defaults
+        dispatch({ type: 'HYDRATE', payload: DEFAULT_DATA })
+      }
+    }
+    load()
   }, [])
 
-  // Persist categories on change
+  // Persist to cloud on change
   useEffect(() => {
     if (state.categories.length === 0) return
-    saveCategories({
-      categories: state.categories,
-      activeCategoryId: state.activeCategoryId,
-      themePreference: state.themePreference
-    })
+    debouncedSync(state, api.saveData)
   }, [state.categories, state.activeCategoryId, state.themePreference])
 
-  // Helper: get active category (prefer stored activeCategoryId, fallback to first)
   const activeCategory = state.categories.find(c => c.id === state.activeCategoryId) || state.categories[0]
 
-  // Helper: get filtered items (search-aware)
   const getFilteredItems = useCallback((categoryId, items) => {
     if (!state.searchQuery) return items
     const q = state.searchQuery.toLowerCase()
@@ -262,3 +285,4 @@ export const useChecklist = () => {
 }
 
 export { ChecklistContext }
+

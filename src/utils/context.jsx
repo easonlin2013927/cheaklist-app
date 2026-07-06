@@ -25,6 +25,15 @@ const initialState = {
 
 function checklistReducer(state, action) {
   switch (action.type) {
+    // ── Hydration ───────────────────────────────────────────────
+    case 'HYDRATE':
+      return {
+        ...state,
+        categories: action.payload.categories,
+        activeCategoryId: action.payload.activeCategoryId ?? state.activeCategoryId,
+        themePreference: action.payload.themePreference ?? state.themePreference
+      }
+
     // ── Categories ──────────────────────────────────────────────
     case 'ADD_CATEGORY': {
       const newCat = { id: Date.now(), title: action.payload || '新清單', items: [] }
@@ -216,8 +225,7 @@ export function ChecklistProvider({ children }) {
   // Hydrate from localStorage on mount
   useEffect(() => {
     const data = loadCategories()
-    dispatch({ type: 'SET_ACTIVE_CATEGORY', payload: data.activeCategoryId })
-    dispatch({ type: 'SET_THEME', payload: data.themePreference })
+    dispatch({ type: 'HYDRATE', payload: data })
   }, [])
 
   // Persist categories on change
@@ -230,7 +238,7 @@ export function ChecklistProvider({ children }) {
     })
   }, [state.categories, state.activeCategoryId, state.themePreference])
 
-  // Helper: get active category
+  // Helper: get active category (prefer stored activeCategoryId, fallback to first)
   const activeCategory = state.categories.find(c => c.id === state.activeCategoryId) || state.categories[0]
 
   // Helper: get filtered items (search-aware)

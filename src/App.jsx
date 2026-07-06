@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import './App.css'
 import { AuthProvider, useAuth } from './utils/auth'
 import { ChecklistProvider, useChecklist } from './utils/context'
@@ -23,27 +23,13 @@ function App() {
 
 function AppShell() {
   const { isAuthenticated, loading } = useAuth()
-  const [appReady, setAppReady] = useState(false)
 
-  // Listen for auth events
-  useEffect(() => {
-    const onVerified = () => setAppReady(true)
-    const onRequired = () => setAppReady(false)
-    window.addEventListener('auth-verified', onVerified)
-    window.addEventListener('auth-required', onRequired)
-    return () => {
-      window.removeEventListener('auth-verified', onVerified)
-      window.removeEventListener('auth-required', onRequired)
-    }
-  }, [])
-
-  // If auth verified or no auth needed, show app
-  if (loading || !appReady) {
+  if (loading) {
     return (
       <div className="auth-page">
         <div className="auth-card">
           <div className="auth-spinner" />
-          <p className="auth-subtitle">載入中...</p>
+          <p className="auth-subtitle">正在檢查登入狀態...</p>
         </div>
       </div>
     )

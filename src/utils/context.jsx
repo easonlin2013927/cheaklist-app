@@ -2,13 +2,14 @@
  * Checklist context and reducer with cloud sync support.
  */
 
-import { createContext, useContext, useReducer, useEffect, useCallback } from 'react'
+import { createContext, useContext, useReducer, useEffect, useCallback, useRef } from 'react'
 import { api } from './api'
+import { applyTheme, resolveTheme, setupThemeListener } from './theme'
 
 const ChecklistContext = createContext(null)
 
 const DEFAULT_DATA = {
-  categories: [{ id: 1, title: '皜', items: [] }],
+  categories: [{ id: 1, title: '清單', items: [] }],
   activeCategoryId: 1,
   themePreference: 'system'
 }
@@ -63,7 +64,7 @@ function checklistReducer(state, action) {
       const cats = state.categories.filter(c => c.id !== action.payload)
       return {
         ...state,
-        categories: cats.length > 0 ? cats : [{ id: Date.now(), title: '皜', items: [] }],
+        categories: cats.length > 0 ? cats : [{ id: Date.now(), title: '清單', items: [] }],
         activeCategoryId: state.activeCategoryId === action.payload
           ? (cats[0]?.id ?? cats[cats.length - 1]?.id)
           : state.activeCategoryId
@@ -242,6 +243,7 @@ function debouncedSync(state, saveFn) {
 
 export function ChecklistProvider({ children }) {
   const [state, dispatch] = useReducer(checklistReducer, initialState)
+  const themeCleanupRef = useRef(null)
 
   // Hydrate from cloud on mount
   useEffect(() => {
@@ -265,6 +267,25 @@ export function ChecklistProvider({ children }) {
     }
     load()
   }, [])
+
+  // Apply theme whenever themePreference changes
+  useEffect(() => {
+    if (state.themePreference) {
+      applyTheme(resolveTheme(state.themePreference))
+    }
+  }, [state.themePreference])
+
+  // Listen for system theme changes when in 'system' mode
+  useEffect(() => {
+    if (state.themePreference === 'system') {
+      themeCleanupRef.current = setupThemeListener(() => {
+        applyTheme(resolveTheme('system'))
+      })
+    }
+    return () => {
+      if (themeCleanupRef.current) themeCleanupRef.current()
+    }
+  }, [state.themePreference])
 
   // Persist to cloud on change
   useEffect(() => {
@@ -305,4 +326,3 @@ export const useChecklist = () => {
 }
 
 export { ChecklistContext }
-

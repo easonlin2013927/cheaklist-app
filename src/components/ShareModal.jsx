@@ -20,7 +20,10 @@ export default function ShareModal() {
         const url = getShareUrl(data)
         setShareUrl(url)
         const qr = generateQRMatrix(url)
-        const { svg } = qrToSVG(qr, 4, 2)
+        // Detect dark mode and set QR colors accordingly
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark' ||
+          window.matchMedia('(prefers-color-scheme: dark)').matches
+        const { svg } = qrToSVG(qr, 4, 2, isDark ? '#ffffff' : '#1d1d1f', isDark ? '#000000' : '#ffffff')
         setQrSvg(svg)
       }
     } catch (err) {

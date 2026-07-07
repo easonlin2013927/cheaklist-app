@@ -27,13 +27,18 @@ export async function onRequestPost(context) {
   }
 }
 
+// stored format: "salt:b64hash"
 async function verifyPassword(password, stored) {
-  const [salt, _] = stored.split(':')
-  const hash = await hashPasswordWithSalt(password, salt)
-  return hash === stored
+  const colonIndex = stored.indexOf(':')
+  if (colonIndex === -1) return false
+  const salt = stored.slice(0, colonIndex)
+  const expectedHash = stored.slice(colonIndex + 1)
+
+  const computedHash = await hashWithSalt(password, salt)
+  return computedHash === expectedHash
 }
 
-async function hashPasswordWithSalt(password, salt) {
+async function hashWithSalt(password, salt) {
   const encoder = new TextEncoder()
   const derivedKey = await crypto.subtle.importKey(
     'raw', encoder.encode(password), 'PBKDF2', false, ['deriveBits']
@@ -42,7 +47,7 @@ async function hashPasswordWithSalt(password, salt) {
     { name: 'PBKDF2', salt: encoder.encode(salt), iterations: 10000, hash: 'SHA-256' },
     derivedKey, 256
   )
-  return `:${btoa(String.fromCharCode(...new Uint8Array(key)))}`
+  return btoa(String.fromCharCode(...new Uint8Array(key)))
 }
 
 function getJwtSecret(env) {

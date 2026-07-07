@@ -1,9 +1,6 @@
 name = "checklist-app"
-pages = { framework = "vite", build_command = "npm run build", output_dir = "dist" }
+pages_build_output_dir = "dist"
 
 kv_namespaces = [
   { binding = "CHECKLIST_KV", id = "627db068494140d181da98ad85a54430" }
 ]
-
-[functions]
-entrypoint = "functions/api.js"

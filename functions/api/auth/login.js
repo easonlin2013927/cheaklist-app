@@ -19,7 +19,7 @@ export async function onRequestPost(context) {
     if (!userData) return json({ error: 'Invalid credentials' }, 401)
 
     const { sign } = await import('hono/jwt')
-    const token = await sign({ sub: userId, iat: Date.now() }, getJwtSecret(env), 'HS256')
+    const token = await sign({ sub: userId, iat: Math.floor(Date.now() / 1000) }, getJwtSecret(env), 'HS256')
     return json({ token, userId, email: emailLower, data: JSON.parse(userData) })
   } catch (err) {
     console.error('Login error:', err)
@@ -27,7 +27,6 @@ export async function onRequestPost(context) {
   }
 }
 
-// stored format: "salt:b64hash"
 async function verifyPassword(password, stored) {
   const colonIndex = stored.indexOf(':')
   if (colonIndex === -1) return false

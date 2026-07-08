@@ -20,7 +20,7 @@ export async function onRequestPost(context) {
     await env.CHECKLIST_KV.put(`email:${emailLower}`, userId)
 
     const { sign } = await import('hono/jwt')
-    const token = await sign({ sub: userId, iat: Date.now() }, getJwtSecret(env), 'HS256')
+    const token = await sign({ sub: userId, iat: Math.floor(Date.now() / 1000) }, getJwtSecret(env), 'HS256')
     return json({ token, userId, email: emailLower })
   } catch (err) {
     console.error('Register error:', err)

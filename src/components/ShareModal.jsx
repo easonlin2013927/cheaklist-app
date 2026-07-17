@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useChecklist } from '../utils/context'
 import { encodeShareData, getShareUrl } from '../utils/share'
 import { generateQRMatrix, qrToSVG } from '../utils/qr'
@@ -11,6 +11,8 @@ export default function ShareModal() {
   const [copied, setCopied] = useState(false)
   const [selectedFormat, setSelectedFormat] = useState('txt')
   const [includeDone, setIncludeDone] = useState(false)
+  const [showSuccess, setShowSuccess] = useState(false)
+  const timerRef = useRef(null)
 
   useEffect(() => {
     if (!state.showShare) return
@@ -32,13 +34,28 @@ export default function ShareModal() {
     }
   }, [state.showShare, state.categories])
 
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current)
+    }
+  }, [])
+
   if (!state.showShare) return null
 
-  const handleCopy = async () => {
+  const setCopiedState = () => {
+    setCopied(true)
+    setShowSuccess(true)
+    if (timerRef.current) clearTimeout(timerRef.current)
+    timerRef.current = setTimeout(() => {
+      setCopied(false)
+      setShowSuccess(false)
+    }, 2000)
+  }
+
+  const handleCopyLink = async () => {
     try {
       await navigator.clipboard.writeText(shareUrl)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      setCopiedState()
     } catch {
       const textarea = document.createElement('textarea')
       textarea.value = shareUrl
@@ -46,8 +63,44 @@ export default function ShareModal() {
       textarea.select()
       document.execCommand('copy')
       document.body.removeChild(textarea)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      setCopiedState()
+    }
+  }
+
+  const handleCopyText = async () => {
+    try {
+      // Generate plain text version of all categories
+      const parts = state.categories.map(cat => {
+        if (cat.items.length === 0) return `### ${cat.title}\n(空清單)`
+        const items = includeDone
+          ? cat.items
+          : cat.items.filter(i => !i.done)
+        const lines = items.map(item =>
+          `${item.done ? '[x]' : '[ ]'} ${item.text}`
+        ).join('\n')
+        return `### ${cat.title}\n${lines}`
+      })
+      const text = parts.join('\n\n')
+      await navigator.clipboard.writeText(text)
+      setCopiedState()
+    } catch {
+      // Fallback
+      const textarea = document.createElement('textarea')
+      const parts = state.categories.map(cat => {
+        const items = includeDone
+          ? cat.items
+          : cat.items.filter(i => !i.done)
+        const lines = items.map(item =>
+          `${item.done ? '[x]' : '[ ]'} ${item.text}`
+        ).join('\n')
+        return `### ${cat.title}\n${lines}`
+      })
+      textarea.value = parts.join('\n\n')
+      document.body.appendChild(textarea)
+      textarea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textarea)
+      setCopiedState()
     }
   }
 
@@ -55,10 +108,31 @@ export default function ShareModal() {
     exportItems(state.categories, selectedFormat, includeDone)
   }
 
+  // Try Web Share API
+  const handleNativeShare = async () => {
+    if (!navigator.share) return
+    try {
+      await navigator.share({
+        title: '清單分享',
+        text: shareUrl,
+        url: shareUrl
+      })
+    } catch {
+      // User cancelled or share failed — nothing to do
+    }
+  }
+
   return (
     <div className="modal-overlay" onClick={() => dispatch({ type: 'TOGGLE_SHARE' })}>
       <div className="modal-dialog share-dialog" onClick={(e) => e.stopPropagation()}>
         <h2 className="modal-title">分享與匯出</h2>
+
+        {/* Success toast */}
+        {showSuccess && (
+          <div className="copy-success-toast">
+            ✓ 已複製到剪貼簿
+          </div>
+        )}
 
         {/* QR Code */}
         {qrSvg && (
@@ -83,12 +157,31 @@ export default function ShareModal() {
           />
           <button
             className={`share-copy-btn${copied ? ' copied' : ''}`}
-            onClick={handleCopy}
+            onClick={handleCopyLink}
             aria-label={copied ? '已複製' : '複製連結'}
           >
             {copied ? '✓' : '複製'}
           </button>
         </div>
+
+        {/* Native share button */}
+        {navigator.share && (
+          <button className="native-share-btn" onClick={handleNativeShare}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
+              <circle cx="18" cy="5" r="3" />
+              <circle cx="6" cy="12" r="3" />
+              <circle cx="18" cy="19" r="3" />
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+              <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+            </svg>
+            系統分享
+          </button>
+        )}
+
+        {/* Copy as text */}
+        <button className="copy-text-btn" onClick={handleCopyText}>
+          📋 複製為純文字
+        </button>
 
         {/* Export section */}
         <fieldset className="modal-fieldset">

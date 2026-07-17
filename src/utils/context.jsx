@@ -1,18 +1,12 @@
 /**
- * Checklist context and reducer with cloud sync support.
+ * Checklist context and reducer — pure localStorage persistence.
  */
 
 import { createContext, useContext, useReducer, useEffect, useCallback, useRef } from 'react'
-import { api } from './api'
+import { loadCategories, saveCategories, loadTheme, saveTheme } from './storage'
 import { applyTheme, resolveTheme, setupThemeListener } from './theme'
 
 const ChecklistContext = createContext(null)
-
-const DEFAULT_DATA = {
-  categories: [{ id: 1, title: '清單', items: [] }],
-  activeCategoryId: 1,
-  themePreference: 'system'
-}
 
 const initialState = {
   categories: [],
@@ -27,22 +21,11 @@ const initialState = {
   editingCategory: null,
   selectedExportFormat: 'txt',
   includeDone: false,
-  importedData: null,
-  syncing: false,
-  syncError: null
+  importedData: null
 }
 
 function checklistReducer(state, action) {
   switch (action.type) {
-    case 'SYNC_START':
-      return { ...state, syncing: true, syncError: null }
-
-    case 'SYNC_END':
-      return { ...state, syncing: false }
-
-    case 'SYNC_ERROR':
-      return { ...state, syncing: false, syncError: action.payload }
-
     case 'HYDRATE':
       return {
         ...state,
@@ -191,12 +174,6 @@ function checklistReducer(state, action) {
     case 'CLEAR_SEARCH':
       return { ...state, searchQuery: '', showSearch: false }
 
-    case 'TOGGLE_EXPORT':
-      return { ...state, showExport: !state.showExport }
-
-    case 'TOGGLE_STATS':
-      return { ...state, showStats: !state.showStats }
-
     case 'TOGGLE_SHARE':
       return { ...state, showShare: !state.showShare }
 
@@ -228,44 +205,36 @@ function checklistReducer(state, action) {
   }
 }
 
-let syncTimer = null
+// Debounced save helper
+let saveTimer = null
 
-function debouncedSync(state, saveFn) {
-  if (syncTimer) clearTimeout(syncTimer)
-  syncTimer = setTimeout(async () => {
+function debouncedSave(state, saveFn) {
+  if (saveTimer) clearTimeout(saveTimer)
+  saveTimer = setTimeout(() => {
     try {
-      await saveFn(state)
+      saveFn(state)
     } catch {
-      // Sync errors handled by UI
+      // Save failed — data kept in memory
     }
-  }, 1000)
+  }, 500)
 }
 
 export function ChecklistProvider({ children }) {
   const [state, dispatch] = useReducer(checklistReducer, initialState)
   const themeCleanupRef = useRef(null)
 
-  // Hydrate from cloud on mount
+  // Hydrate from localStorage on mount
   useEffect(() => {
-    const load = async () => {
-      try {
-        const data = await api.getData()
-        dispatch({ type: 'HYDRATE', payload: data })
-      } catch {
-        // API failed — try localStorage fallback
-        try {
-          const saved = localStorage.getItem('checklist-data')
-          if (saved) {
-            dispatch({ type: 'HYDRATE', payload: JSON.parse(saved) })
-          } else {
-            dispatch({ type: 'HYDRATE', payload: DEFAULT_DATA })
-          }
-        } catch {
-          dispatch({ type: 'HYDRATE', payload: DEFAULT_DATA })
-        }
-      }
+    try {
+      const data = loadCategories()
+      dispatch({ type: 'HYDRATE', payload: data })
+    } catch {
+      dispatch({ type: 'HYDRATE', payload: {
+        categories: [{ id: 1, title: '清單', items: [] }],
+        activeCategoryId: 1,
+        themePreference: 'system'
+      }})
     }
-    load()
   }, [])
 
   // Apply theme whenever themePreference changes
@@ -287,22 +256,24 @@ export function ChecklistProvider({ children }) {
     }
   }, [state.themePreference])
 
-  // Persist to cloud on change
+  // Persist categories to localStorage on change
   useEffect(() => {
     if (state.categories.length === 0) return
-    debouncedSync(state, async (s) => {
-      try {
-        await api.saveData(s)
-      } catch {
-        // API failed — save to localStorage as fallback
-        localStorage.setItem('checklist-data', JSON.stringify({
-          categories: s.categories,
-          activeCategoryId: s.activeCategoryId,
-          themePreference: s.themePreference
-        }))
-      }
+    debouncedSave(state, (s) => {
+      saveCategories({
+        categories: s.categories,
+        activeCategoryId: s.activeCategoryId,
+        themePreference: s.themePreference
+      })
     })
   }, [state.categories, state.activeCategoryId, state.themePreference])
+
+  // Persist theme preference separately
+  useEffect(() => {
+    if (state.themePreference) {
+      saveTheme(state.themePreference)
+    }
+  }, [state.themePreference])
 
   const activeCategory = state.categories.find(c => c.id === state.activeCategoryId) || state.categories[0]
 

@@ -1,9 +1,4 @@
 name = "checklist-app"
 pages_build_output_dir = "dist"
 
-kv_namespaces = [
-  { binding = "CHECKLIST_KV", id = "627db068494140d181da98ad85a54430" }
-]
-
 [vars]
-JWT_SECRET = "checklist-app-dev-secret-change-in-production"

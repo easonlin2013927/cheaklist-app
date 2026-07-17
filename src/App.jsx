@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react'
 import './App.css'
-import { AuthProvider, useAuth } from './utils/auth'
 import { ChecklistProvider, useChecklist } from './utils/context'
 import { checkForSharedData } from './utils/share'
 import CategoryTabs from './components/CategoryTabs'
@@ -11,34 +10,8 @@ import ListItem from './components/ListItem'
 import CategoryModal from './components/CategoryModal'
 import StatsModal from './components/StatsModal'
 import ShareModal from './components/ShareModal'
-import LoginPage from './components/LoginPage'
 
 function App() {
-  return (
-    <AuthProvider>
-      <AppShell />
-    </AuthProvider>
-  )
-}
-
-function AppShell() {
-  const { isAuthenticated, loading } = useAuth()
-
-  if (loading) {
-    return (
-      <div className="auth-page">
-        <div className="auth-card">
-          <div className="auth-spinner" />
-          <p className="auth-subtitle">正在檢查登入狀態...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (!isAuthenticated) {
-    return <LoginPage />
-  }
-
   return (
     <ChecklistProvider>
       <div className="app">
@@ -52,7 +25,6 @@ function AppShell() {
 
 function AppContent() {
   const { state, dispatch, activeCategory, getFilteredItems } = useChecklist()
-  const { logout } = useAuth()
   const hasImported = useRef(false)
 
   // Check for shared data on mount
@@ -193,9 +165,6 @@ function AppContent() {
               清除已完成（{done}）
             </button>
           )}
-          <button onClick={logout} className="logout-btn" aria-label="登出">
-            登出
-          </button>
         </div>
       </footer>
 

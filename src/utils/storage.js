@@ -36,7 +36,7 @@ export const loadCategories = () => {
     const raw = localStorage.getItem(DATA_KEY)
     if (raw) return JSON.parse(raw)
 
-    // Migration
+    // Migration from legacy format
     const migrated = migrateData()
     if (migrated) {
       saveCategories(migrated)
@@ -59,7 +59,11 @@ export const loadCategories = () => {
 }
 
 export const saveCategories = (data) => {
-  localStorage.setItem(DATA_KEY, JSON.stringify(data))
+  try {
+    localStorage.setItem(DATA_KEY, JSON.stringify(data))
+  } catch {
+    // Storage full — data stays in memory
+  }
 }
 
 export const loadTheme = () => {
@@ -71,5 +75,9 @@ export const loadTheme = () => {
 }
 
 export const saveTheme = (theme) => {
-  localStorage.setItem(THEME_KEY, theme)
+  try {
+    localStorage.setItem(THEME_KEY, theme)
+  } catch {
+    // Ignore
+  }
 }

@@ -16,6 +16,10 @@ dist
 # Dev vars (contains secrets)
 .dev.vars
 
+# Wrangler local state
+.wrangler
+_worker.bundle
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
